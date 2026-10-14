@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -project Tape.xcodeproj -scheme Tape -configuration Release -destination 'generic/platform=macOS' -derivedDataPath /tmp/Tape-ci ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO TAPE_SOURCE_REVISION="$GITHUB_SHA" build
+      - run: lipo -archs /tmp/Tape-ci/Build/Products/Release/Tape.app/Contents/MacOS/Tape
+      - name: Archive verified universal app
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          ditto --noextattr --norsrc /tmp/Tape-ci/Build/Products/Release/Tape.app /tmp/Tape-artifact/Tape.app
+          tar -C /tmp/Tape-artifact -czf /tmp/Tape-universal.tar.gz Tape.app
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: Tape-universal
+          path: /tmp/Tape-universal.tar.gz
+          retention-days: 7

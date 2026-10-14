@@ -1,0 +1,25 @@
+import Foundation
+
+/// Own only a deliberate horizontal precision gesture. Ownership includes momentum,
+/// even if the modifiers are released, so that it cannot leak into the underlying app.
+public struct ScrollGesture {
+    private var owned = false
+    private var rejected = false
+    private var lastEvent: TimeInterval = 0
+    public init() {}
+    public mutating func reset() { owned = false; rejected = false; lastEvent = 0 }
+    public mutating func consume(x: Double, y: Double, precise: Bool, modifiers: Bool,
+                                 eligible: Bool, begins: Bool, momentum: Bool,
+                                 cancelled: Bool, finishesMomentum: Bool, now: TimeInterval) -> Bool {
+        if begins || (!momentum && now - lastEvent > 0.3) { owned = false; rejected = false }
+        if !eligible || !precise || !x.isFinite || !y.isFinite { reset(); return false }
+        if !owned && !rejected && !momentum && (x != 0 || y != 0) {
+            owned = modifiers && abs(x) > abs(y)
+            rejected = !owned
+        }
+        lastEvent = now
+        let consume = owned
+        if cancelled || finishesMomentum { owned = false; rejected = false }
+        return consume
+    }
+}
