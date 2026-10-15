@@ -52,79 +52,129 @@ final class TapeAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         openSettings(); return true
     }
     private func refreshStatus() {
-        statusItem?.button?.toolTip = controller.isPaused ? "Tape — paused" : "Tape — \(controller.managedCount) windows"
+        statusItem?.button?.toolTip = controller.isPaused ? "Tape — paused" : "Tape — \(controller.windowCountText)"
     }
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard menu === statusItem.menu else { return }
         controller.checkPermission()
         actions.removeAll()
         menu.removeAllItems()
-        item("Tape · \(controller.isPaused ? "Paused" : "\(controller.managedCount) windows")", menu: menu, enabled: false) {}
-        if let message = controller.message { item(message, menu: menu, enabled: false) {} }
-        item(controller.isRestoring ? "Restoring windows…" : controller.isPaused ? "Start Tape" : "Pause and Restore Windows", menu: menu,
-             key: "p", modifiers: [.control, .option], enabled: !controller.isRestoring && !previewMode) { [weak self] in
+        let live = !controller.isPaused && !controller.isRestoring && !previewMode
+        let enabled = controller.canArrange
+        let column = controller.focusedColumn
+        let control: NSEvent.ModifierFlags = [.control, .option]
+        let shifted: NSEvent.ModifierFlags = [.control, .option, .shift]
+        let left = String(UnicodeScalar(NSLeftArrowFunctionKey)!), right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+        let up = String(UnicodeScalar(NSUpArrowFunctionKey)!), down = String(UnicodeScalar(NSDownArrowFunctionKey)!)
+        let home = String(UnicodeScalar(NSHomeFunctionKey)!), end = String(UnicodeScalar(NSEndFunctionKey)!)
+
+        // Status and Pause
+        item("Tape · \(controller.isPaused ? "Paused" : controller.windowCountText)", menu: menu, enabled: false) {}
+        if let message = controller.message { note(message, menu: menu) }
+        item(controller.isRestoring ? "Restoring Windows…" : controller.isPaused ? "Start Tape" : "Pause and Restore Windows", menu: menu,
+             key: "p", modifiers: control, enabled: !controller.isRestoring && !previewMode) { [weak self] in
             guard let self else { return }
             if self.controller.hasAccessibility { self.controller.perform(.togglePause) } else { self.openGuide() }
         }
         menu.addItem(.separator())
-        let enabled = controller.canArrange
-        let left = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
-        let right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
-        item("Focus Previous Window", menu: menu, key: left, modifiers: [.control, .option], enabled: enabled) { [weak self] in self?.controller.perform(.strip(.left)) }
-        item("Focus Next Window", menu: menu, key: right, modifiers: [.control, .option], enabled: enabled) { [weak self] in self?.controller.perform(.strip(.right)) }
-        let windows = NSMenu(); windows.autoenablesItems = false
+
+        // Navigate
+        let go = submenu("Go to Window", in: menu, enabled: enabled)
+        item("Previous Column", menu: go, key: left, modifiers: control) { [weak self] in self?.controller.perform(.strip(.left)) }
+        item("Next Column", menu: go, key: right, modifiers: control) { [weak self] in self?.controller.perform(.strip(.right)) }
+        item("First Column", menu: go, key: home, modifiers: control) { [weak self] in self?.controller.perform(.strip(.first)) }
+        item("Last Column", menu: go, key: end, modifiers: control) { [weak self] in self?.controller.perform(.strip(.last)) }
+        item("Centre Focused Column", menu: go, key: "c", modifiers: control) { [weak self] in self?.controller.perform(.center) }
+        go.addItem(.separator())
         for choice in controller.windowChoices {
-            let entry = item(choice.name, menu: windows) { [weak self] in self?.controller.chooseWindow(choice.id) }
-            entry.state = choice.selected ? .on : .off
+            item(choice.name, menu: go) { [weak self] in self?.controller.chooseWindow(choice.id) }.state = choice.selected ? .on : .off
         }
-        let choices = item("Go to Window", menu: menu, enabled: enabled) {}; choices.submenu = windows
-        let width = NSMenu(); width.autoenablesItems = false
+
+        // Arrange
+        item("Move Column Left", menu: menu, key: left, modifiers: shifted, enabled: enabled && (column?.index ?? 0) > 0) { [weak self] in
+            self?.controller.perform(.strip(.moveLeft))
+        }
+        item("Move Column Right", menu: menu, key: right, modifiers: shifted,
+             enabled: enabled && column.map { $0.index < $0.columnCount - 1 } == true) { [weak self] in
+            self?.controller.perform(.strip(.moveRight))
+        }
+        let width = submenu("Width", in: menu, enabled: enabled)
         for (title, fraction) in [("One Third", 1.0 / 3), ("Half", 0.5), ("Two Thirds", 2.0 / 3), ("Full", 1.0)] {
-            item(title, menu: width, enabled: enabled) { [weak self] in self?.controller.setWidth(fraction) }
+            let preset = item(title, menu: width) { [weak self] in self?.controller.setWidth(fraction) }
+            preset.state = column?.widthFraction.map { abs($0 - fraction) < 0.01 } == true ? .on : .off
         }
         width.addItem(.separator())
-        item("Cycle Width", menu: width, key: "w", modifiers: [.control, .option], enabled: enabled) { [weak self] in self?.controller.perform(.strip(.nextWidth)) }
-        let widths = item("Window Width", menu: menu, enabled: enabled) {}; widths.submenu = width
-        let allWidths = NSMenu(); allWidths.autoenablesItems = false
-        for (title, fraction) in [("One Third", 1.0 / 3), ("Half", 0.5), ("Two Thirds", 2.0 / 3), ("Full", 1.0)] {
-            item(title, menu: allWidths, enabled: enabled) { [weak self] in self?.controller.setAllWidths(fraction) }
-        }
-        let all = item("All Window Widths", menu: menu, enabled: enabled) {}; all.submenu = allWidths
-        let shared = item("Resize Windows Together", menu: menu) { [weak self] in
-            guard let self else { return }; self.controller.settings.sharedWidths.toggle()
-        }
-        shared.state = controller.settings.sharedWidths ? .on : .off
-        let groups = NSMenu(); groups.autoenablesItems = false
-        for key in [StripActionKey.joinLeft, .joinRight, .detach, .toggleMode, .previousTab, .nextTab, .tabLeft, .tabRight, .taller, .shorter, .equalHeights] {
-            item(key.label, menu: groups, enabled: enabled) { [weak self] in self?.controller.perform(.strip(key)) }
-        }
-        let stacks = item("Stacks and Tabs", menu: menu, enabled: enabled) {}; stacks.submenu = groups
-        let destinations = NSMenu(); destinations.autoenablesItems = false
-        for display in controller.displayChoices where display.enabled && display.id != controller.focusedDisplayID {
-            item(display.name, menu: destinations, enabled: controller.canSendToDisplay) { [weak self] in self?.controller.sendWindow(to: display.id) }
-        }
-        destinations.addItem(.separator())
-        item("Next Display", menu: destinations, key: "d", modifiers: [.control, .option], enabled: controller.canSendToDisplay) { [weak self] in self?.controller.perform(.nextDisplay) }
-        let moveDisplay = item("Move to Display", menu: menu, enabled: controller.canSendToDisplay) {}; moveDisplay.submenu = destinations
+        item("Next Width", menu: width, key: "w", modifiers: control) { [weak self] in self?.controller.perform(.strip(.nextWidth)) }
+        item("Wider", menu: width, key: "=", modifiers: control) { [weak self] in self?.controller.perform(.strip(.wider)) }
+        item("Narrower", menu: width, key: "-", modifiers: control) { [weak self] in self?.controller.perform(.strip(.narrower)) }
+        width.addItem(.separator())
+        item("Make All Columns This Width", menu: width, enabled: (column?.columnCount ?? 0) > 1) { [weak self] in self?.controller.matchAllWidths() }
+        item("Resize Columns Together", menu: width) { [weak self] in self?.controller.settings.sharedWidths.toggle() }
+            .state = controller.settings.sharedWidths ? .on : .off
 
-        item("Move Column Left", menu: menu, key: left, modifiers: [.control, .option, .shift], enabled: enabled) { [weak self] in self?.controller.perform(.strip(.moveLeft)) }
-        item("Move Column Right", menu: menu, key: right, modifiers: [.control, .option, .shift], enabled: enabled) { [weak self] in self?.controller.perform(.strip(.moveRight)) }
-        item("Float / Tile Focused Window", menu: menu, key: "f", modifiers: [.control, .option], enabled: !controller.isPaused && !previewMode) { [weak self] in self?.controller.perform(.toggleFloat) }
-        menu.addItem(.separator())
-        item("Choose Managed Apps…", menu: menu) { [weak self] in SettingsNavigation.shared.open(.apps); self?.openSettings() }
-        let scope = NSMenu(); scope.autoenablesItems = false
-        let lock = item("Lock Tape to Selected Windows", menu: scope, enabled: !controller.isPaused && !previewMode) { [weak self] in
-            guard let self else { return }; self.controller.setManageAllWindows(!self.controller.manageAllWindows)
+        let grouped = (column?.windowCount ?? 0) > 1
+        let stacks = submenu("Stacks and Tabs", in: menu, enabled: enabled)
+        item("Join Column on the Left", menu: stacks, key: ",", modifiers: control, enabled: (column?.index ?? 0) > 0) { [weak self] in
+            self?.controller.perform(.strip(.joinLeft))
         }
-        lock.state = controller.manageAllWindows ? .off : .on
-        scope.addItem(.separator())
-        for choice in controller.managedWindowChoices {
-            let entry = item(choice.name, menu: scope, enabled: !controller.isPaused && !previewMode) { [weak self] in
-                self?.controller.setWindowManaged(choice.id, !choice.managed)
+        item("Join Column on the Right", menu: stacks, key: ".", modifiers: control,
+             enabled: column.map { $0.index < $0.columnCount - 1 } == true) { [weak self] in
+            self?.controller.perform(.strip(.joinRight))
+        }
+        item("Separate into Own Column", menu: stacks, key: ",", modifiers: shifted, enabled: grouped) { [weak self] in
+            self?.controller.perform(.strip(.detach))
+        }
+        stacks.addItem(.separator())
+        item(column?.tabbed == true ? "Show as Stack" : "Show as Tabs", menu: stacks, key: "t", modifiers: control, enabled: grouped) { [weak self] in
+            self?.controller.perform(.strip(.toggleMode))
+        }
+        stacks.addItem(.separator())
+        for (key, shortcut, modifiers) in [(StripActionKey.previousTab, up, control), (.nextTab, down, control),
+                                           (.tabLeft, up, shifted), (.tabRight, down, shifted)] {
+            item(key.label, menu: stacks, key: shortcut, modifiers: modifiers, enabled: grouped) { [weak self] in
+                self?.controller.perform(.strip(key))
             }
-            entry.state = choice.managed ? .on : .off
         }
-        let selection = item("Choose Managed Windows", menu: menu, enabled: !controller.isPaused && !previewMode) {}; selection.submenu = scope
+        stacks.addItem(.separator())
+        let stacked = grouped && column?.tabbed == false
+        for (key, shortcut, modifiers) in [(StripActionKey.taller, "=", shifted), (.shorter, "-", shifted), (.equalHeights, "", NSEvent.ModifierFlags())] {
+            item(key.label, menu: stacks, key: shortcut, modifiers: modifiers, enabled: stacked) { [weak self] in
+                self?.controller.perform(.strip(key))
+            }
+        }
+
+        // Moving between displays only makes sense with more than one.
+        let others = controller.displayChoices.filter { $0.enabled && $0.id != controller.focusedDisplayID }
+        if !others.isEmpty {
+            let displays = submenu("Move to Display", in: menu, enabled: controller.canSendToDisplay)
+            for display in others {
+                item(display.name, menu: displays) { [weak self] in self?.controller.sendWindow(to: display.id) }
+            }
+            displays.addItem(.separator())
+            item("Next Display", menu: displays, key: "d", modifiers: control) { [weak self] in self?.controller.perform(.nextDisplay) }
+        }
+        let floats = controller.focusedWindowFloats
+        item(floats == true ? "Tile This Window" : "Float This Window", menu: menu, key: "f", modifiers: control, enabled: floats != nil) { [weak self] in
+            self?.controller.perform(.toggleFloat)
+        }
+        menu.addItem(.separator())
+
+        // What Tape manages
+        let scope = submenu("Managed Windows", in: menu, enabled: live)
+        item("All Windows", menu: scope) { [weak self] in self?.controller.setManageAllWindows(true) }
+            .state = controller.manageAllWindows ? .on : .off
+        item("Only Checked Windows", menu: scope) { [weak self] in self?.controller.setManageAllWindows(false) }
+            .state = controller.manageAllWindows ? .off : .on
+        if !controller.managedWindowChoices.isEmpty { scope.addItem(.separator()) }
+        for choice in controller.managedWindowChoices {
+            item(choice.name, menu: scope) { [weak self] in self?.controller.setWindowManaged(choice.id, !choice.managed) }
+                .state = choice.managed ? .on : .off
+        }
+        scope.addItem(.separator())
+        item("Choose Apps…", menu: scope) { [weak self] in SettingsNavigation.shared.open(.apps); self?.openSettings() }
+        menu.addItem(.separator())
+
+        // App
         item("Settings…", menu: menu, key: ",", modifiers: .command) { [weak self] in self?.openSettings() }
         item("How to Use Tape…", menu: menu) { [weak self] in self?.openGuide() }
         item("Check for Updates…", menu: menu, enabled: !UpdateService.shared.isBusy) { [weak self] in
@@ -132,6 +182,24 @@ final class TapeAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         item("Quit Tape", menu: menu, key: "q", modifiers: .command) { [weak self] in self?.quit() }
+    }
+    private func submenu(_ title: String, in menu: NSMenu, enabled: Bool) -> NSMenu {
+        let submenu = NSMenu(); submenu.autoenablesItems = false
+        item(title, menu: menu, enabled: enabled) {}.submenu = submenu
+        return submenu
+    }
+    /// Status messages can be a sentence or two; wrap them instead of stretching the menu.
+    private func note(_ text: String, menu: NSMenu) {
+        var lines: [String] = [], line = ""
+        for word in text.split(separator: " ") {
+            if !line.isEmpty, line.count + word.count + 1 > 42 { lines.append(line); line = "" }
+            line += line.isEmpty ? String(word) : " " + word
+        }
+        if !line.isEmpty { lines.append(line) }
+        let entry = item(lines.joined(separator: "\n"), menu: menu, enabled: false) {}
+        entry.attributedTitle = NSAttributedString(string: entry.title, attributes: [
+            .font: NSFont.menuFont(ofSize: NSFont.smallSystemFontSize), .foregroundColor: NSColor.secondaryLabelColor,
+        ])
     }
     @discardableResult private func item(_ title: String, menu: NSMenu, key: String = "", modifiers: NSEvent.ModifierFlags = [], enabled: Bool = true, action: @escaping () -> Void) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(runMenuItem(_:)), keyEquivalent: key)

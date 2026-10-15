@@ -12,7 +12,8 @@ public struct ScrollGesture {
                                  eligible: Bool, begins: Bool, momentum: Bool,
                                  cancelled: Bool, finishesMomentum: Bool, now: TimeInterval) -> Bool {
         if begins || (!momentum && now - lastEvent > 0.3) { owned = false; rejected = false }
-        if !eligible || !precise || !x.isFinite || !y.isFinite { reset(); return false }
+        // Eligibility is decided when the gesture starts; crossing onto another display keeps it owned.
+        if !precise || !x.isFinite || !y.isFinite || (!eligible && !owned) { reset(); return false }
         if !owned && !rejected && !momentum && (x != 0 || y != 0) {
             owned = modifiers && abs(x) > abs(y)
             rejected = !owned

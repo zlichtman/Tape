@@ -42,7 +42,7 @@ Control–Option–D moves the selected window to the next enabled display.
 Choose **Settings** from the Tape menu to change spacing and managed apps or search
 for a setting. Pause or Quit restores managed windows.
 
-You can also use **Go to Window**, **Window Width**, and **Choose Managed Apps**
+You can also use **Go to Window**, **Width**, and **Managed Windows → Choose Apps**
 from the native menu. In Settings → Apps, uncheck apps Tape should leave alone,
 or choose **Only selected apps** to opt apps in individually.
 
@@ -61,10 +61,10 @@ remove and add Tape again in Accessibility settings.
 - Display-paced motion and independent write queues per app.
 - Move columns without changing their widths.
 - A lone automatic-width window fills the screen; app tabs keep its layout. Explicit widths remain yours.
-- Width presets: ⅓ → ½ → ⅔ → Full; finer width adjustments and All Window Widths.
-- Native edge resizing, optional Resize Windows Together, and title-bar drag reordering with edge browsing.
+- Width presets: ⅓ → ½ → ⅔ → Full; finer width adjustments and Make All Columns This Width.
+- Native edge resizing, optional Resize Columns Together, and title-bar drag reordering with edge browsing.
 - Stacks and tabs, native tab selection and drag reordering, adjustable/equal stack heights, and separation back into columns.
-- Lock Tape to selected open windows; unchecking restores each window and leaves it alone.
+- Manage only checked open windows; unchecking restores each window and leaves it alone.
 - Float or tile the focused window.
 - Dialogs, fixed-size panels, attached sheets, and full-screen windows stay outside the strip.
 - Window and edge gaps, centring modes, and reduced-motion support.
@@ -75,7 +75,7 @@ remove and add Tape again in Accessibility settings.
 - Background windows join without activating their app or scrolling the strip.
 - Pause and Quit restore original frames within the current display's usable bounds.
 
-Use **Choose Managed Windows** in the menu, or Settings → Apps, to lock Tape to the focused window and check any others to include. These choices follow currently open native windows through Pause/Resume and temporary hiding or minimization; they reset when Tape quits. New windows stay outside Tape while locked. App selection remains a separate persistent setting.
+Choose **Managed Windows → Only Checked Windows** in the menu, or use Settings → Apps, to limit Tape to the focused window and check any others to include. These choices follow currently open native windows through Pause/Resume and temporary hiding or minimization; they reset when Tape quits. New windows stay outside Tape while this is on. App selection remains a separate persistent setting.
 
 Join the focused window into the column on its left/right with Control–Option–, / .; separate it with Control–Option–Shift–,. Control–Option–T switches a group between stacked windows and tabs. Control–Option–Up/Down selects a window in a group; adding Shift reorders it. Drag a Tape tab to another tab’s position. Stack height controls and Equal Stack Heights are in **Stacks and Tabs** in the menu.
 

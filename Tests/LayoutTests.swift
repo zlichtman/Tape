@@ -225,7 +225,8 @@ final class StripTests: XCTestCase {
     func testWidthPresetCycle() {
         var strip = Strip()
         strip.insert(WindowID(), foreground: true, width: .fraction(1.0 / 3))
-        for expected in [0.5, 2.0 / 3, 1.0, 1.0 / 3] {
+        // A lone automatic column is shown full width, so the cycle continues from Full.
+        for expected in [1.0 / 3, 0.5, 2.0 / 3, 1.0] {
             strip.perform(.nextWidth)
             XCTAssertEqual(strip.columns[0].width, .fraction(expected))
         }

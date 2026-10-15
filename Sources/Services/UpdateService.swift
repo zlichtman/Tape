@@ -80,6 +80,8 @@ final class UpdateService: ObservableObject {
     /// A build this Mac can't run (too-new macOS or missing architecture), so
     /// it isn't downloaded again on every check.
     private static let incompatibleBuildKey = "updates.incompatibleBuild"
+    /// The macOS version that rejected that build; upgrading macOS clears the skip.
+    private static let incompatibleSystemKey = "updates.incompatibleSystem"
     private static let allowedDownloadHosts: Set<String> = [
         "github.com",
         "objects.githubusercontent.com",
@@ -144,6 +146,7 @@ final class UpdateService: ObservableObject {
     private func checkIfDue() {
         guard automaticallyCheckForUpdates else { return }
         if case .available = status { return }
+        guard !isBusy else { return }
         let last = UserDefaults.standard.object(forKey: Self.lastCheckKey) as? Date
         guard last == nil || Date().timeIntervalSince(last!) > 6 * 60 * 60 else { return }
         check(manual: false)
@@ -174,7 +177,10 @@ final class UpdateService: ObservableObject {
                     return
                 }
                 let (release, version, build) = selected
-                let skipped = UserDefaults.standard.integer(forKey: Self.incompatibleBuildKey)
+                // A manual check, or a newer macOS, gets another chance at a skipped build.
+                let skippedOn = UserDefaults.standard.string(forKey: Self.incompatibleSystemKey)
+                let skipped = manual || skippedOn != Self.systemVersion
+                    ? 0 : UserDefaults.standard.integer(forKey: Self.incompatibleBuildKey)
                 guard ReleaseRevision.isNewer(build, than: max(self.currentBuild, skipped)) else {
                     self.availableDownloadURL = nil
                     self.availableVersion = nil
@@ -313,6 +319,7 @@ final class UpdateService: ObservableObject {
             guard case let .success(staged) = result else {
                 if case let .failure(error) = result, case UpdateError.incompatible? = error as? UpdateError {
                     UserDefaults.standard.set(build, forKey: Self.incompatibleBuildKey)
+                    UserDefaults.standard.set(Self.systemVersion, forKey: Self.incompatibleSystemKey)
                     status = .failed("Tape \(version) doesn’t support this Mac")
                 } else {
                     status = .failed("Update verification failed")
@@ -338,6 +345,9 @@ final class UpdateService: ObservableObject {
             } catch UpdateError.notInstalled {
                 // Running from the disk image, Downloads or a translocated copy.
                 status = .failed("Move Tape to Applications, then install the update")
+                try? FileManager.default.removeItem(at: staged.root)
+            } catch UpdateError.notWritable {
+                status = .failed("Tape can’t replace itself here. Update with Homebrew instead.")
                 try? FileManager.default.removeItem(at: staged.root)
             } catch {
                 status = .failed("Couldn’t install the update")
@@ -420,6 +430,11 @@ final class UpdateService: ObservableObject {
         guard destination.path.hasPrefix("/Applications/") else {
             throw UpdateError.notInstalled
         }
+        // Renaming the bundle needs write access to both it and Applications; check before quitting.
+        guard FileManager.default.isWritableFile(atPath: destination.path),
+              FileManager.default.isWritableFile(atPath: destination.deletingLastPathComponent().path) else {
+            throw UpdateError.notWritable
+        }
         let pid = ProcessInfo.processInfo.processIdentifier
         let script = """
         while kill -0 \(pid) 2>/dev/null; do sleep 0.2; done
@@ -429,9 +444,10 @@ final class UpdateService: ObservableObject {
         incoming="${destination}.incoming"
         backup="${destination}.previous"
         /bin/rm -rf "$incoming" "$backup"
-        /usr/bin/ditto "$staged" "$incoming" || { /bin/rm -rf "$staging_root"; exit 1; }
-        /bin/mv "$destination" "$backup" || { /bin/rm -rf "$incoming" "$staging_root"; exit 1; }
-        /bin/mv "$incoming" "$destination" || { /bin/mv "$backup" "$destination"; /bin/rm -rf "$staging_root"; exit 1; }
+        # Any failure reopens the installed copy so Tape never stays quit.
+        /usr/bin/ditto "$staged" "$incoming" || { /bin/rm -rf "$incoming" "$staging_root"; /usr/bin/open "$destination"; exit 1; }
+        /bin/mv "$destination" "$backup" || { /bin/rm -rf "$incoming" "$staging_root"; /usr/bin/open "$destination"; exit 1; }
+        /bin/mv "$incoming" "$destination" || { /bin/mv "$backup" "$destination"; /bin/rm -rf "$incoming" "$staging_root"; /usr/bin/open "$destination"; exit 1; }
         /bin/rm -rf "$backup" "$staging_root"
         /usr/bin/open "$destination"
         """
@@ -524,6 +540,11 @@ final class UpdateService: ObservableObject {
         ) as? String ?? "0"
     }
 
+    private static var systemVersion: String {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        return "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
+    }
+
     private var currentBuild: Int {
         Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "") ?? 0
     }
@@ -537,6 +558,7 @@ final class UpdateService: ObservableObject {
         case invalidSignature
         case incompatible
         case notInstalled
+        case notWritable
         case commandFailed
     }
 }

@@ -95,17 +95,19 @@ public struct Strip: Equatable, Sendable {
             guard columns.indices.contains(target) else { return }
             columns.swapAt(index, target)
         case .nextWidth:
-            columns[index].automaticWidth = false
             let presets = [1.0 / 3, 0.5, 2.0 / 3, 1.0]
-            if case .fraction(let current) = columns[index].width {
+            let shown = displayedFraction(of: index)
+            columns[index].automaticWidth = false
+            if let current = shown {
                 columns[index].width = .fraction(presets.first { $0 > current + 0.001 } ?? presets[0])
             } else {
                 columns[index].width = .fraction(presets[0])
             }
         case .adjustWidth(let delta):
             guard delta.isFinite else { return }
+            let shown = displayedFraction(of: index)
             columns[index].automaticWidth = false
-            if case .fraction(let fraction) = columns[index].width {
+            if let fraction = shown {
                 columns[index].width = .fraction(min(max(fraction + delta, 0.2), 1))
             } else if case .points(let points) = columns[index].width {
                 columns[index].width = .points(max(160, points + delta * 1000))
@@ -144,6 +146,14 @@ public struct Strip: Equatable, Sendable {
             guard delta.isFinite, let id = focusedWindow, columns[index].windows.count > 1 else { return }
             columns[index].heightWeights[id] = min(8, max(0.25, (columns[index].heightWeights[id] ?? 1) + delta))
         }
+    }
+
+    /// The width the column is shown at, as a fraction: a lone automatic column fills the screen.
+    public func displayedFraction(of index: Int) -> Double? {
+        guard columns.indices.contains(index) else { return nil }
+        if columns.count == 1 && columns[index].automaticWidth { return 1 }
+        if case .fraction(let fraction) = columns[index].width { return fraction }
+        return nil
     }
 
     private mutating func remove(_ id: WindowID, fromColumn index: Int) {

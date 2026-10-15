@@ -8,10 +8,10 @@ enum TapeAction: Hashable {
     var label: String {
         switch self {
         case .strip(let key): return key.label
-        case .center: return "Centre The Focused Column"
-        case .toggleFloat: return "Float / Tile The Window"
+        case .center: return "Centre Focused Column"
+        case .toggleFloat: return "Float / Tile Window"
         case .togglePause: return "Pause / Resume Tape"
-        case .nextDisplay: return "Move To Next Display"
+        case .nextDisplay: return "Move to Next Display"
         }
     }
 }
@@ -52,27 +52,27 @@ enum StripActionKey: Hashable {
     }
     var label: String {
         switch self {
-        case .left: return "Focus Left"
-        case .right: return "Focus Right"
-        case .first: return "Focus First"
-        case .last: return "Focus Last"
-        case .slot(let index): return "Focus Column \(index + 1)"
-        case .moveLeft: return "Move Left"
-        case .moveRight: return "Move Right"
-        case .nextWidth: return "Next Width Preset"
+        case .left: return "Previous Column"
+        case .right: return "Next Column"
+        case .first: return "First Column"
+        case .last: return "Last Column"
+        case .slot(let index): return "Go to Column \(index + 1)"
+        case .moveLeft: return "Move Column Left"
+        case .moveRight: return "Move Column Right"
+        case .nextWidth: return "Next Width"
         case .wider: return "Wider"
         case .narrower: return "Narrower"
-        case .joinLeft: return "Join Column On The Left"
-        case .joinRight: return "Join Column On The Right"
-        case .detach: return "Separate Into A Column"
-        case .toggleMode: return "Stack / Tabs"
-        case .previousTab: return "Previous Window In Column"
-        case .nextTab: return "Next Window In Column"
-        case .tabLeft: return "Move Tab / Stack Up"
-        case .tabRight: return "Move Tab / Stack Down"
+        case .joinLeft: return "Join Column on the Left"
+        case .joinRight: return "Join Column on the Right"
+        case .detach: return "Separate into Own Column"
+        case .toggleMode: return "Switch Stack / Tabs"
+        case .previousTab: return "Previous Window in Column"
+        case .nextTab: return "Next Window in Column"
+        case .tabLeft: return "Move Up in Column"
+        case .tabRight: return "Move Down in Column"
         case .equalHeights: return "Equal Stack Heights"
-        case .taller: return "Taller In Stack"
-        case .shorter: return "Shorter In Stack"
+        case .taller: return "Taller in Stack"
+        case .shorter: return "Shorter in Stack"
         }
     }
 }

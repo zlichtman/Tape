@@ -420,6 +420,8 @@ final class AXWindowServer: WindowServer {
     private func id(for element: AXUIElement) -> WindowID {
         var pid: pid_t = 0
         AXUIElementGetPid(element, &pid)
+        // Every stored handle is later used for writes; a slow app must fail fast, not stall the worker.
+        AXUIElementSetMessagingTimeout(element, 0.05)
         lock.lock(); defer { lock.unlock() }
         if let existing = elements.first(where: { CFEqual($0.value, element) }) { return existing.key }
         let id = WindowID()
@@ -520,7 +522,13 @@ final class AXWindowServer: WindowServer {
     }
 
     private func readInteraction() {
-        guard running, let (id, kind) = interaction, let element = element(id) else { return }
+        guard running, let (id, kind) = interaction else { return }
+        guard let element = element(id) else {
+            // The window's app quit mid-drag; let the next drag start cleanly.
+            cancelInteraction()
+            onChange?()
+            return
+        }
         interactionReadInFlight = true
         let ticket = interactionEpoch
         let finished = interactionFinished || NSEvent.pressedMouseButtons & 1 == 0

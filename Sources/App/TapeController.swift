@@ -36,6 +36,16 @@ struct TapeWindowChoice: Identifiable {
     let managed: Bool
 }
 
+/// What the menu needs to know about the focused column to label and enable its items.
+struct TapeFocusedColumn {
+    let index: Int
+    let columnCount: Int
+    let windowCount: Int
+    let tabbed: Bool
+    /// nil when the width was set by dragging rather than a preset.
+    let widthFraction: Double?
+}
+
 struct TapeTabGroup: Identifiable {
     let id: WindowID
     let frame: CGRect
@@ -212,8 +222,24 @@ final class TapeController: ObservableObject {
         let enabled = displayChoices.filter(\.enabled).count
         if enabled == 0 { return "No displays enabled" }
         return enabled == 1
-            ? "\(managedCount) windows on \(displayChoices.first(where: \.enabled)?.name ?? displayName)"
-            : "\(managedCount) windows across \(enabled) displays"
+            ? "\(windowCountText) on \(displayChoices.first(where: \.enabled)?.name ?? displayName)"
+            : "\(windowCountText) across \(enabled) displays"
+    }
+    var windowCountText: String { managedCount == 1 ? "1 window" : "\(managedCount) windows" }
+    var focusedColumn: TapeFocusedColumn? {
+        guard canArrange, let strip = activeState?.strip, let index = strip.focusedIndex else { return nil }
+        let column = strip.columns[index]
+        return TapeFocusedColumn(
+            index: index, columnCount: strip.columns.count, windowCount: column.windows.count,
+            tabbed: column.mode == .tabbed, widthFraction: strip.displayedFraction(of: index))
+    }
+    /// The window Float / Tile acts on: nil when there is none, true when Tape leaves it alone.
+    var focusedWindowFloats: Bool? {
+        guard !isPaused, !isRestoring, !isPreview,
+            let id = externalFocus ?? activeState?.strip.focusedWindow, snapshots[id]?.isTileable == true,
+            settings.appPolicy.manages(snapshots[id]?.bundleIdentifier), owners[id].map(isEnabled) == true
+        else { return nil }
+        return !managesWindow(id)
     }
 
     func checkPermission() {
@@ -384,6 +410,17 @@ final class TapeController: ObservableObject {
         stopScrolling(flush: true)
         revision += 1
         state.strip.setWidths(.fraction(min(max(fraction, 0.2), 1)))
+        relayout(state, reveal: true)
+        refreshStatus()
+    }
+
+    /// Give every column on the focused display the focused column's width.
+    func matchAllWidths() {
+        guard canArrange, let state = activeState, let index = state.strip.focusedIndex else { return }
+        stopScrolling(flush: true)
+        revision += 1
+        let width = state.strip.displayedFraction(of: index).map(ColumnWidth.fraction) ?? state.strip.columns[index].width
+        state.strip.setWidths(width)
         relayout(state, reveal: true)
         refreshStatus()
     }

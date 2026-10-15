@@ -1,3 +1,15 @@
+**Tape 1.30**
+
+- Reorganize the Tape menu. Go to Window collects column navigation and the window list; Width combines presets, Wider/Narrower, Make All Columns This Width and Resize Columns Together; Managed Windows combines window and app choices.
+- Show the current width preset with a checkmark, label Float This Window / Tile This Window and Show as Tabs / Show as Stack by what they will do, and grey out stack and tab commands that cannot apply. Move to Display appears only with more than one display.
+- List every shortcut beside its menu command, including Centre, Wider, Narrower, First and Last Column.
+- Wrap long status messages in the menu instead of widening it, and say “1 window” rather than “1 windows”.
+- A lone full-width window now cycles from Full to One Third with Control–Option–W, and Wider/Narrower start from its full width.
+- Fail fast on every window handle when an app stops responding, so one slow app no longer pauses Tape.
+- Clear an in-progress drag when its app quits, so later drags and resizes are tracked again.
+- Keep Control–Option scroll momentum with Tape when the pointer crosses onto another display.
+- Check that Tape can replace itself before quitting to update, and reopen the installed copy if replacement fails. A build skipped as incompatible is offered again after a macOS update or a manual check.
+
 **Tape 1.29**
 
 - A lone window fills the screen automatically. Opening an app tab or receiving another focus notification keeps the same layout; explicitly chosen widths remain yours.

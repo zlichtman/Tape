@@ -28,9 +28,9 @@ struct OnboardingView: View {
                     Text("Try selecting a window above. Real windows keep their own widths; Tape scrolls to the one you select.").font(.callout).foregroundStyle(.secondary)
                 }
                 instruction("1", "Start Tape", "Allow Accessibility access, then start. Tape arranges normal windows on each enabled display.")
-                instruction("2", "Choose your apps", "Use Choose Managed Apps in the Tape menu. Uncheck apps you want to leave alone, or manage only your selected apps.")
+                instruction("2", "Choose your apps", "Use Managed Windows → Choose Apps in the Tape menu. Uncheck apps you want to leave alone, or manage only your selected apps.")
                 instruction("3", "Choose a window", "Click any app in the Dock, click its window, or use Go to Window in the Tape menu. Keyboard: Control–Option–← / →. Hold Control–Option and scroll horizontally with two fingers to browse without switching apps.")
-                instruction("4", "Make room", "Use Window Width in the menu. Float a window to position it freely. Control–Option–D moves the focused window to the next enabled display. Pause restores the windows Tape arranged.")
+                instruction("4", "Make room", "Use Width in the menu. Float a window to position it freely. Control–Option–D moves the focused window to the next enabled display. Pause restores the windows Tape arranged.")
                 Text("Turn off Stage Manager and macOS window tiling, and pause other window managers, so they don’t fight over window positions.").font(.callout).foregroundStyle(.secondary)
                 if !controller.hasAccessibility {
                     HStack {

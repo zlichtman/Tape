@@ -180,7 +180,7 @@ struct SettingsView: View {
                         .disabled(!controller.hasAccessibility || controller.isRestoring || controller.isPreview)
                 }
                 if let message = controller.message { Text(message).foregroundStyle(SystemStyle.accent).fixedSize(horizontal: false, vertical: true) }
-                Text("Click an app in the Dock or use the Tape menu to choose a window. Tape brings it into view. Use the menu’s Window Width commands to make room.").foregroundStyle(SystemStyle.secondary)
+                Text("Click an app in the Dock or use the Tape menu to choose a window. Tape brings it into view. Use the menu’s Width commands to make room.").foregroundStyle(SystemStyle.secondary)
             }
             card("Displays", symbol: "display.2") {
                 ForEach(controller.displayChoices) { display in
@@ -235,7 +235,7 @@ struct SettingsView: View {
                 }
             }.onAppear { refreshApps() }
             card("Managed Windows", symbol: "rectangle.on.rectangle") {
-                Toggle("Lock Tape to selected windows", isOn: Binding(get: { !controller.manageAllWindows }, set: { controller.setManageAllWindows(!$0) }))
+                Toggle("Manage only checked windows", isOn: Binding(get: { !controller.manageAllWindows }, set: { controller.setManageAllWindows(!$0) }))
                     .toggleStyle(.checkbox).disabled(controller.isPaused)
                 Text("Locking keeps the focused window in Tape. Check any other windows you want to include. Unchecking restores a window’s original size and position. These choices apply to currently open windows; new windows stay unmanaged while locked.").foregroundStyle(.secondary)
                 ForEach(controller.managedWindowChoices) { window in
@@ -263,8 +263,8 @@ struct SettingsView: View {
             }
             card("Widths", symbol: "rectangle.expand.vertical") {
                 Text("⅓ → ½ → ⅔ → Full").font(.title3.monospaced())
-                Text("A lone window fills the screen. New columns use half width; an explicit width is kept when you open app tabs. Use All Window Widths in the Tape menu to size a display’s strip together.").foregroundStyle(SystemStyle.secondary)
-                Toggle("Resize windows together", isOn: $settings.sharedWidths).toggleStyle(.checkbox)
+                Text("A lone window fills the screen. New columns use half width; an explicit width is kept when you open app tabs. Use Width → Make All Columns This Width in the Tape menu to size a display’s strip together.").foregroundStyle(SystemStyle.secondary)
+                Toggle("Resize columns together", isOn: $settings.sharedWidths).toggleStyle(.checkbox)
                 Text("Share width changes from shortcuts, menu presets, and dragging a window’s edge with all columns on that display.").foregroundStyle(.secondary)
             }
             card("Stacks and Tabs", symbol: "rectangle.stack") {
@@ -297,7 +297,7 @@ struct SettingsView: View {
             }
         case .help:
             card("Getting Started", symbol: "book") {
-                Text("1. Start Tape from its menu bar icon.\n2. Choose any app in the Dock, click a window, or choose Go to Window from the Tape menu.\n3. Hold Control–Option and scroll horizontally with two fingers to browse without switching apps. Set Window Width from the menu, or use Control–Option–W.\n4. Choose Float Window to move a window freely.\n5. Pause Tape restores your original window positions.")
+                Text("1. Start Tape from its menu bar icon.\n2. Choose any app in the Dock, click a window, or choose Go to Window from the Tape menu.\n3. Hold Control–Option and scroll horizontally with two fingers to browse without switching apps. Set Width from the menu, or use Control–Option–W.\n4. Choose Float This Window to move a window freely.\n5. Pause Tape restores your original window positions.")
                 Button("Show First-Run Guide", action: showGuide)
             }
             card("Mac Setup", symbol: "desktopcomputer") {
