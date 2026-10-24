@@ -26,8 +26,8 @@ targets:
       path: Resources/Info.plist
       properties:
         CFBundleDisplayName: Tape
-        CFBundleShortVersionString: '1.32'
-        CFBundleVersion: '32'
+        CFBundleShortVersionString: '1.33'
+        CFBundleVersion: '33'
         TapeSourceRevision: '$(TAPE_SOURCE_REVISION)'
         LSUIElement: true
         NSHighResolutionCapable: true

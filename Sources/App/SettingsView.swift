@@ -23,6 +23,7 @@ struct SettingsView: View {
     @State private var searchFocused = false
     @State private var compactSearch = false
     @State private var availableApps: [ManagedAppChoice] = []
+    @State private var showsBackgroundApps = false
     /// Display options only mean something with more than one display.
     private var showsDisplays: Bool { controller.displayChoices.count > 1 }
     private var results: [SettingsSearchEntry] {
@@ -297,8 +298,12 @@ struct SettingsView: View {
                 let others = availableApps.filter { !$0.isPrimary && $0.hasIcon } + availableApps.filter { !$0.hasIcon }
                 ForEach(primary) { app in appRow(app) }
                 if !others.isEmpty {
-                    Text("Background and system apps").font(.caption).foregroundStyle(SystemStyle.secondary).padding(.top, 6)
-                    ForEach(others) { app in appRow(app) }
+                    // Agents and services rarely have windows; keep them out of the way until asked for.
+                    DisclosureGroup(isExpanded: $showsBackgroundApps) {
+                        VStack(alignment: .leading, spacing: 13) { ForEach(others) { app in appRow(app) } }.padding(.top, 8)
+                    } label: {
+                        Text("Background and system apps (\(others.count))").foregroundStyle(SystemStyle.secondary)
+                    }.padding(.top, 4)
                 }
                 if availableApps.isEmpty { Text("Open an app or add it below.").foregroundStyle(.secondary) }
                 HStack {
@@ -419,8 +424,12 @@ struct SettingsView: View {
             icon = NSWorkspace.shared.icon(forFile: path)
             let info = Bundle(url: URL(fileURLWithPath: path))?.infoDictionary ?? [:]
             hasIcon = info["CFBundleIconFile"] != nil || info["CFBundleIconName"] != nil || info["CFBundleIcons"] != nil
+            // Installed in an Applications folder itself, not a helper nested inside another app.
             let folders = ["/Applications/", "/System/Applications/", NSHomeDirectory() + "/Applications/"]
-            isPrimary = hasIcon && (regular || folders.contains { path.hasPrefix($0) })
+            let installed = folders.contains { folder in
+                path.hasPrefix(folder) && !path.dropFirst(folder.count).dropLast(4).contains(".app/")
+            }
+            isPrimary = hasIcon && (regular || installed)
         }
     }
     private func refreshApps() {
