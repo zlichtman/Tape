@@ -1,0 +1,45 @@
+name: Tape
+options:
+  minimumXcodeGenVersion: 2.38.0
+  deploymentTarget:
+    macOS: '13.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.9'
+    TAPE_SOURCE_REVISION: development
+    MACOSX_DEPLOYMENT_TARGET: '13.0'
+    ARCHS: 'arm64 x86_64'
+    ONLY_ACTIVE_ARCH: NO
+    DEVELOPMENT_TEAM: 28LJG7MXT3
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Tape:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+      - path: Resources/Assets.xcassets
+        excludes: [AppIcon.appiconset]
+      - path: Resources/AppIcon.icon
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Tape
+        CFBundleShortVersionString: '1.33'
+        CFBundleVersion: '33'
+        TapeSourceRevision: '$(TAPE_SOURCE_REVISION)'
+        LSUIElement: true
+        NSHighResolutionCapable: true
+        NSPrincipalClass: NSApplication
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.opensource.Tape
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+schemes:
+  Tape:
+    build:
+      targets:
+        Tape: all
+    run:
+      config: Debug

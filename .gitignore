@@ -1,0 +1,43 @@
+# Xcode (project.yml is canonical; XcodeGen generates the project and Info.plist)
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+Resources/Info.plist
+Resources/LegacyIcon.appiconset/
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# Archives and release output
+*.zip
+*.dmg
+Releases/
+Homebrew/
+
+# Logs
+*.log
+
+# Signing material and local configuration
+*.cer
+*.p12
+*.provisionprofile
+*.mobileprovision
+.env
+.env.*
+!.env.example
+
+# Internal build brief: kept locally, never published
+BRIEF.md
+
+# Download counts of deleted releases (Scripts/downloads.sh); the only record, kept locally
+downloads.tsv
